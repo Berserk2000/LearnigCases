@@ -91,9 +91,10 @@ public:
         ++document_count_;
     }
 
-    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const {
+    template <typename Filter>
+    vector<Document> FindTopDocuments(const string& raw_query, Filter conditions ) const {
         const Query query_words = ParseQuery(raw_query);
-        auto matched_documents = FindAllDocuments(query_words,status);
+        auto matched_documents = FindAllDocuments(query_words, conditions);
 
         sort(matched_documents.begin(), matched_documents.end(),
             [](const Document& lhs, const Document& rhs) {
@@ -106,6 +107,12 @@ public:
         }
 
         return matched_documents;
+    }
+    
+    vector<Document> FindTopDocuments(const string& raw_query) const {
+        return FindTopDocuments(raw_query,[](int document_id, DocumentStatus status, int rating){
+            return status == DocumentStatus::ACTUAL;
+        });
     }
 
     int GetDocumentCount() const{
@@ -199,7 +206,8 @@ private:
     }
 
 
-    vector<Document> FindAllDocuments(const Query& query_words, DocumentStatus status) const {
+    template <typename Filter>
+    vector<Document> FindAllDocuments(const Query& query_words, Filter conditions) const {
         vector<Document> matched_documents;
         map<int, double> potential_documents;
 
@@ -221,7 +229,7 @@ private:
         }
 
         for (const auto& [id, rel] : potential_documents) {
-            if(id_to_status_.at(id) == status){
+            if(conditions(id,id_to_status_.at(id), id_to_rating_.at(id))){
                 const int rating = id_to_rating_.at(id); 
                 matched_documents.push_back({ id,rel,rating });
             }
@@ -231,6 +239,7 @@ private:
     }
 };
 
+// ==================== для примера =========================
 
 void PrintDocument(const Document& document) {
     cout << "{ "s
@@ -239,19 +248,49 @@ void PrintDocument(const Document& document) {
          << "rating = "s << document.rating
          << " }"s << endl;
 }
-
 int main() {
     SearchServer search_server;
     search_server.SetStopWords("и в на"s);
-
     search_server.AddDocument(0, "белый кот и модный ошейник"s,        DocumentStatus::ACTUAL, {8, -3});
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s,       DocumentStatus::ACTUAL, {7, 2, 7});
     search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, {5, -12, 2, 1});
-
-    for (const Document& document : search_server.FindTopDocuments("ухоженный кот"s)) {
+    search_server.AddDocument(3, "ухоженный скворец евгений"s,         DocumentStatus::BANNED, {9});
+    cout << "ACTUAL by default:"s << endl;
+    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
         PrintDocument(document);
     }
-} 
+    cout << "ACTUAL:"s << endl;
+    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::ACTUAL; })) {
+        PrintDocument(document);
+    }
+    cout << "Even ids:"s << endl;
+    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
+        PrintDocument(document);
+    }
+    return 0;
+}
+
+
+// void PrintDocument(const Document& document) {
+//     cout << "{ "s
+//          << "document_id = "s << document.id << ", "s
+//          << "relevance = "s << document.relevance << ", "s
+//          << "rating = "s << document.rating
+//          << " }"s << endl;
+// }
+
+// int main() {
+//     SearchServer search_server;
+//     search_server.SetStopWords("и в на"s);
+
+//     search_server.AddDocument(0, "белый кот и модный ошейник"s,        DocumentStatus::ACTUAL, {8, -3});
+//     search_server.AddDocument(1, "пушистый кот пушистый хвост"s,       DocumentStatus::ACTUAL, {7, 2, 7});
+//     search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, {5, -12, 2, 1});
+
+//     for (const Document& document : search_server.FindTopDocuments("ухоженный кот"s)) {
+//         PrintDocument(document);
+//     }
+// } 
 // vector<int> ReadRating(){
 //     int n = 0 ;
 //     cin >> n ;
