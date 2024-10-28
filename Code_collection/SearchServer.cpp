@@ -109,9 +109,9 @@ public:
         return matched_documents;
     }
     
-    vector<Document> FindTopDocuments(const string& raw_query) const {
-        return FindTopDocuments(raw_query,[](int document_id, DocumentStatus status, int rating){
-            return status == DocumentStatus::ACTUAL;
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus needed_status = DocumentStatus::ACTUAL) const {
+        return FindTopDocuments(raw_query,[needed_status](int document_id, DocumentStatus status, int rating){
+            return status == needed_status;
         });
     }
 
@@ -239,6 +239,7 @@ private:
     }
 };
 
+
 // ==================== для примера =========================
 
 void PrintDocument(const Document& document) {
@@ -259,16 +260,14 @@ int main() {
     for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
         PrintDocument(document);
     }
-    cout << "ACTUAL:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::ACTUAL; })) {
+    cout << "BANNED:"s << endl;
+    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
         PrintDocument(document);
     }
     cout << "Even ids:"s << endl;
     for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
         PrintDocument(document);
     }
-    return 0;
-}
 
 
 // void PrintDocument(const Document& document) {
