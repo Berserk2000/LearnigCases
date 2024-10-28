@@ -1,34 +1,35 @@
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <set>
-#include <map>
 #include <string>
+#include <map>
+#include <numeric>
 #include <utility>
 #include <vector>
-#include <numeric>
-#include <cmath>
 
 using namespace std;
 
 const double EPSILON = 1e-6;
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
-// string ReadLine() {
-//     string s;
-//     getline(cin, s);
-//     return s;
-// }
+string ReadLine() {
+    string s;
+    getline(cin, s);
+    return s;
+}
 
-// int ReadLineWithNumber() {
-//     int result = 0;
-//     cin >> result;
-//     ReadLine();
-//     return result;
-// }
+int ReadLineWithNumber() {
+    int result = 0;
+    cin >> result;
+    ReadLine();
+    return result;
+}
 
 vector<string> SplitIntoWords(const string& text) {
     vector<string> words;
     string word;
+
     for (const char c : text) {
         if (c == ' ') {
             if (!word.empty()) {
@@ -40,6 +41,7 @@ vector<string> SplitIntoWords(const string& text) {
             word += c;
         }
     }
+
     if (!word.empty()) {
         words.push_back(word);
     }
@@ -67,7 +69,6 @@ struct Query {
 
 class SearchServer {
 public:
-
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
             stop_words_.insert(word);
@@ -75,11 +76,13 @@ public:
     }
 
     void AddDocument(int document_id, const string& document,DocumentStatus status, vector<int> rating) {
-        const map <string, int> words_freq = SplitIntoWordsNoStop(document); // map{слово,количество повторов слова в документе}
+        const map <string, int> words_freq = SplitIntoWordsNoStop(document); // map{word,TF}
 
         id_to_rating_[document_id] = ComputeAverageRating(rating);
         id_to_status_[document_id] =status;
 
+        //реализация SplitIntoWordsNoStop изменена, возвращает map{слово,количество повторов слова в документе},
+        //поэтому для расчета суммарного количества слов используется accumulate
         int total_words = accumulate(words_freq.begin(), words_freq.end(), 0, [](int sum, const pair<string, int>& next) {
             return sum + next.second;
         });
@@ -108,7 +111,7 @@ public:
 
         return matched_documents;
     }
-    
+    //status template specification
     vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus needed_status = DocumentStatus::ACTUAL) const {
         return FindTopDocuments(raw_query,[needed_status](int document_id, DocumentStatus status, int rating){
             return status == needed_status;
@@ -140,6 +143,7 @@ public:
         for(const auto& i : mathced_words){
             matched_words_vector.push_back(i);
         }
+
         sort(matched_words_vector.begin(), matched_words_vector.end());
 
         if (matched_words_vector.size() > MAX_RESULT_DOCUMENT_COUNT) {
@@ -239,9 +243,6 @@ private:
     }
 };
 
-
-// ==================== для примера =========================
-
 void PrintDocument(const Document& document) {
     cout << "{ "s
          << "document_id = "s << document.id << ", "s
@@ -249,6 +250,7 @@ void PrintDocument(const Document& document) {
          << "rating = "s << document.rating
          << " }"s << endl;
 }
+
 int main() {
     SearchServer search_server;
     search_server.SetStopWords("и в на"s);
@@ -268,66 +270,4 @@ int main() {
     for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
         PrintDocument(document);
     }
-
-
-// void PrintDocument(const Document& document) {
-//     cout << "{ "s
-//          << "document_id = "s << document.id << ", "s
-//          << "relevance = "s << document.relevance << ", "s
-//          << "rating = "s << document.rating
-//          << " }"s << endl;
-// }
-
-// int main() {
-//     SearchServer search_server;
-//     search_server.SetStopWords("и в на"s);
-
-//     search_server.AddDocument(0, "белый кот и модный ошейник"s,        DocumentStatus::ACTUAL, {8, -3});
-//     search_server.AddDocument(1, "пушистый кот пушистый хвост"s,       DocumentStatus::ACTUAL, {7, 2, 7});
-//     search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, {5, -12, 2, 1});
-
-//     for (const Document& document : search_server.FindTopDocuments("ухоженный кот"s)) {
-//         PrintDocument(document);
-//     }
-// } 
-// vector<int> ReadRating(){
-//     int n = 0 ;
-//     cin >> n ;
-//     vector <int> rating(n);
-//     for(auto& i : rating){
-//         cin >> i;
-//     }
-//     ReadLine();
-//     return rating;
-// }
-
-
-// SearchServer CreateSearchServer() {
-//     SearchServer search_server;
-
-//     search_server.SetStopWords(ReadLine());
-
-//     const int document_count = ReadLineWithNumber();
-//     for (int document_id = 0; document_id < document_count; ++document_id) {
-//         string text = ReadLine();
-//         DocumentStatus status = ReadStatus();
-//         vector<int> rating = ReadRating();
-//         search_server.AddDocument(document_id, text, status, rating);
-//     }
-
-//     return search_server;
-// }
-
-
-// int main() {
-//     const SearchServer search_server = CreateSearchServer();
-
-//     const string query = ReadLine();
-
-//     for (const auto& document : search_server.FindTopDocuments(query)) {
-//         cout << "{ document_id = "s << document.id << ", "s
-//             << "relevance = "s << document.relevance << ", "s
-//             << "rating = "s << document.rating << " }"s << endl;
-//     }
-// }
-
+}
