@@ -296,39 +296,76 @@ void PrintDocument(const Document& document, ostringstream& out) {
          << "relevance = "s << document.relevance << ", "s
          << "rating = "s << document.rating << " }"s;
 }
+template <typename Iterator>
+class IteratorRange {
+public:
+    IteratorRange(Iterator begin, Iterator end)
+        : first_(begin)
+        , last_(end)
+        , size_(distance(first_, last_)) {
+    }
+
+    Iterator begin() const {
+        return first_;
+    }
+
+    Iterator end() const {
+        return last_;
+    }
+
+    size_t size() const {
+        return size_;
+    }
+
+private:
+    Iterator first_, last_;
+    size_t size_;
+};
+
+ostream& operator<<(ostream& out, const Document& document) {
+    out << "{ "s
+        << "document_id = "s << document.id << ", "s
+        << "relevance = "s << document.relevance << ", "s
+        << "rating = "s << document.rating << " }"s;
+    return out;
+}
+
+template <typename Iterator>
+ostream& operator<<(ostream& out, const IteratorRange<Iterator>& range) {
+    for (Iterator it = range.begin(); it != range.end(); ++it) {
+        out << *it;
+    }
+    return out;
+}
+
+template <typename Iterator>
 class Paginator {
 public:
-    auto begin() const{
-        return pages_.cbegin();
+    Paginator(Iterator begin, Iterator end, size_t page_size) {
+        for (size_t left = distance(begin, end); left > 0;) {
+            const size_t current_page_size = min(page_size, left);
+            const Iterator current_page_end = next(begin, current_page_size);
+            pages_.push_back({begin, current_page_end});
+
+            left -= current_page_size;
+            begin = current_page_end;
+        }
     }
+
+    auto begin() const {
+        return pages_.begin();
+    }
+
     auto end() const {
-        return pages_.cend();
+        return pages_.end();
     }
+
     size_t size() const {
         return pages_.size();
     }
-    template <typename It>
-    Paginator(It begin , It end, int page_size){
-        int page_number = 0;
-        int doc_count = 0;
-        while(begin != end){      
-            ostringstream doc;
-            PrintDocument(*begin,doc);
-            if(doc_count == 0){
-                pages_.push_back(doc.str());
-            }else{
-                pages_[page_number] += doc.str();   
-            }
-            ++begin;
-            ++doc_count;
-            if(doc_count == page_size){
-                doc_count = 0;
-                ++page_number;
-            }
-        }
-    }
+
 private:
-    vector<string> pages_;
+    vector<IteratorRange<Iterator>> pages_;
 };
 
 template <typename Container>
