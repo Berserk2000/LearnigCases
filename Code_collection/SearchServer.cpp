@@ -82,7 +82,7 @@ public:
         for (const auto& word : words) {
             for(auto c : word){
                 if(c>=0 && c<=31){
-                    throw invalid_argument("Invalid char in stop words_collection");
+                    throw invalid_argument("Invalid char in stop-words collection");
                 }
             }
             stop_words_.insert(word);
@@ -285,6 +285,7 @@ private:
         return matched_documents;
     }
 };
+
 void PrintDocument(const Document& document) {
     cout << "{ "s
          << "document_id = "s << document.id << ", "s
